@@ -42,10 +42,16 @@ public class ClientHandler implements Runnable {
             while ((msg = in.readLine()) != null) {
 
                 String[] data = msg.split("\\|", 4);
+                if (data.length == 0) {
+                    continue;
+                }
                 String type = data[0];
 
                 switch (type) {
                     case "LOGIN":
+                        if (data.length < 2 || data[1] == null || data[1].isBlank()) {
+                            break;
+                        }
                         username = data[1];
                         ChatServer.addClient(this);
                         ChatServer.broadcast("SYSTEM|" + username + " 上线了");
@@ -53,6 +59,9 @@ public class ClientHandler implements Runnable {
                         break;
 
                     case "CHAT":
+                        if (username == null || data.length < 3) {
+                            break;
+                        }
                         // 可选：保存聊天记录到数据库
                         DBUtil.saveMessage(username, "ALL", data[2]);
                         ChatServer.broadcast(msg);
@@ -60,18 +69,28 @@ public class ClientHandler implements Runnable {
 
                     case "EMOJI":
                     case "IMAGE":
+                        if (username == null || data.length < 3) {
+                            break;
+                        }
                         // 可选：保存占位符到数据库
                         DBUtil.saveMessage(username, "ALL", "[" + type + "]");
                         ChatServer.broadcast(msg);
                         break;
 
                     case "FILE":
+                        if (username == null || data.length < 4) {
+                            break;
+                        }
                         // 可选：保存占位符到数据库
                         DBUtil.saveMessage(username, "ALL", "[文件] " + data[2]);
                         ChatServer.broadcast(msg);
                         break;
 
                     case "PRIVATE":
+                        if (username == null || data.length < 4 || data[2].isBlank()) {
+                            break;
+                        }
+                        DBUtil.saveMessage(username, data[2], data[3]);
                         ChatServer.sendPrivate(data[2], msg);
                         break;
                 }

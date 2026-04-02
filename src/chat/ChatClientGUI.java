@@ -7,7 +7,9 @@ import java.awt.event.ActionEvent;
 import java.io.File;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.List;
 
 /**
  * 聊天客户端 GUI（最终版）
@@ -28,9 +30,28 @@ public class ChatClientGUI extends JFrame {
 
     private PrintWriter out;
     private String username;
+    private final List<FileLinkRange> fileLinks = new ArrayList<>();
 
     // 防止历史记录重复显示
     private boolean historyLoaded = false;
+
+    private static class FileLinkRange {
+        private final int start;
+        private final int endExclusive;
+        private final String fileName;
+        private final String base64;
+
+        private FileLinkRange(int start, int endExclusive, String fileName, String base64) {
+            this.start = start;
+            this.endExclusive = endExclusive;
+            this.fileName = fileName;
+            this.base64 = base64;
+        }
+
+        private boolean contains(int pos) {
+            return pos >= start && pos < endExclusive;
+        }
+    }
 
     public ChatClientGUI(Socket socket, String username) throws Exception {
         this.username = username;
@@ -45,6 +66,19 @@ public class ChatClientGUI extends JFrame {
         chatPane = new JTextPane();
         chatPane.setEditable(false);
         doc = chatPane.getStyledDocument();
+        chatPane.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                int pos = chatPane.viewToModel2D(e.getPoint());
+                for (int i = fileLinks.size() - 1; i >= 0; i--) {
+                    FileLinkRange link = fileLinks.get(i);
+                    if (link.contains(pos)) {
+                        saveFile(link.fileName, link.base64);
+                        break;
+                    }
+                }
+            }
+        });
         add(new JScrollPane(chatPane), BorderLayout.CENTER);
 
         // 在线用户列表
@@ -160,31 +194,43 @@ public class ChatClientGUI extends JFrame {
     // 显示消息
     public void showMessage(String msg) {
         try {
+            if (msg == null || msg.isBlank()) {
+                return;
+            }
             // 如果消息是历史消息标记且已经加载过，忽略
             if (historyLoaded && msg.startsWith("HISTORY|")) return;
 
             String[] data = msg.split("\\|", 4);
+            if (data.length == 0) {
+                return;
+            }
             switch (data[0]) {
                 case "SYSTEM":
+                    if (data.length < 2) break;
                     appendText("[系统] " + data[1] + "\n");
                     break;
                 case "CHAT":
+                    if (data.length < 3) break;
                     appendText(data[1] + "：" + data[2] + "\n");
                     break;
                 case "EMOJI":
+                    if (data.length < 3) break;
                     appendText(data[1] + "：" + data[2] + "\n");
                     break;
                 case "IMAGE":
+                    if (data.length < 3) break;
                     appendText(data[1] + "：");
                     appendImage(data[2]);
                     appendText("\n");
                     break;
                 case "FILE":
+                    if (data.length < 4) break;
                     appendText(data[1] + " 发送文件：");
                     insertFileLink(data[2], data[3]);
                     appendText("\n");
                     break;
                 case "PRIVATE":
+                    if (data.length < 4) break;
                     String sender = data[1];
                     String receiver = data[2];
                     String content = data[3];
@@ -194,6 +240,7 @@ public class ChatClientGUI extends JFrame {
                     }
                     break;
                 case "USERLIST":
+                    if (data.length < 2) break;
                     userModel.clear();
                     for (String u : data[1].split(",")) {
                         if (!u.isEmpty()) userModel.addElement(u);
@@ -236,15 +283,7 @@ public class ChatClientGUI extends JFrame {
 
             int start = doc.getLength();
             doc.insertString(start, fileName, attr);
-
-            chatPane.addMouseListener(new java.awt.event.MouseAdapter() {
-                public void mouseClicked(java.awt.event.MouseEvent e) {
-                    int pos = chatPane.viewToModel2D(e.getPoint());
-                    if (pos >= start && pos <= start + fileName.length()) {
-                        saveFile(fileName, base64);
-                    }
-                }
-            });
+            fileLinks.add(new FileLinkRange(start, start + fileName.length(), fileName, base64));
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -286,31 +325,8 @@ public class ChatClientGUI extends JFrame {
         historyLoaded = true;
 
         try {
-            for (String s : DBUtil.loadRecentMessages(20)) {
-                if (s.contains("EMOJI|")) {
-                    String[] parts = s.split("\\|");
-                    if (parts.length == 3) {
-                        appendText("[" + parts[0] + "] " + parts[1] + "：" + parts[2] + "\n");
-                    } else {
-                        appendText(s + "\n");
-                    }
-                } else if (s.contains("PRIVATE|")) {
-                    String[] parts = s.split("\\|", 4);
-                    if (parts.length == 4) {
-                        String sender = parts[1];
-                        String receiver = parts[2];
-                        String content = parts[3];
-                        if (receiver.equals(username)) {
-                            appendText("[" + parts[0] + "] [私聊←" + sender + "] " + content + "\n");
-                        } else if (sender.equals(username)) {
-                            appendText("[" + parts[0] + "] [私聊→" + receiver + "] " + content + "\n");
-                        }
-                    } else {
-                        appendText(s + "\n");
-                    }
-                } else {
-                    appendText(s + "\n");
-                }
+            for (String s : DBUtil.loadRecentMessages(username, 20)) {
+                appendText(s + "\n");
             }
             appendText("----------- 以上是历史记录 -----------\n");
         } catch (Exception e) {

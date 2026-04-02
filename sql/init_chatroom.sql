@@ -1,0 +1,15 @@
+CREATE DATABASE IF NOT EXISTS chatroom
+  DEFAULT CHARACTER SET utf8mb4
+  DEFAULT COLLATE utf8mb4_unicode_ci;
+
+USE chatroom;
+
+CREATE TABLE IF NOT EXISTS chat_log (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  sender VARCHAR(64) NOT NULL,
+  receiver VARCHAR(64) NOT NULL DEFAULT 'ALL',
+  content TEXT NOT NULL,
+  time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_time (time),
+  INDEX idx_sender_receiver (sender, receiver)
+);

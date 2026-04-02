@@ -1,6 +1,7 @@
 package chat;
 
 import java.io.BufferedReader;
+import javax.swing.SwingUtilities;
 
 /**
  * 客户端接收线程
@@ -38,8 +39,8 @@ public class ClientReceiver implements Runnable {
         try {
             String msg;
             while ((msg = in.readLine()) != null) {
-                // 所有显示逻辑都交给 GUI
-                gui.showMessage(msg);
+                String finalMsg = msg;
+                SwingUtilities.invokeLater(() -> gui.showMessage(finalMsg));
             }
         } catch (Exception e) {
             System.out.println("与服务器断开连接");

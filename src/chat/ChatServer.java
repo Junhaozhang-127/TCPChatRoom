@@ -23,7 +23,10 @@ public class ChatServer {
 
     public static synchronized void removeClient(ClientHandler c) {
         clients.remove(c);
-        broadcast("SYSTEM|" + c.getUsername() + " 下线了");
+        String username = c.getUsername();
+        if (username != null && !username.isBlank()) {
+            broadcast("SYSTEM|" + username + " 下线了");
+        }
         sendUserList();
     }
 
@@ -47,7 +50,10 @@ public class ChatServer {
     public static synchronized void sendUserList() {
         StringBuilder sb = new StringBuilder("USERLIST|");
         for (ClientHandler c : clients) {
-            sb.append(c.getUsername()).append(",");
+            String username = c.getUsername();
+            if (username != null && !username.isBlank()) {
+                sb.append(username).append(",");
+            }
         }
         broadcast(sb.toString());
     }

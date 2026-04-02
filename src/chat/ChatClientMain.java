@@ -16,24 +16,19 @@ public class ChatClientMain {
     public static void main(String[] args) {
         try {
             String username = JOptionPane.showInputDialog("请输入用户名");
+            if (username == null || username.isBlank()) {
+                JOptionPane.showMessageDialog(null, "用户名不能为空");
+                return;
+            }
+
             Socket socket = new Socket("localhost", 8888);
 
             ChatClientGUI gui = new ChatClientGUI(socket, username);
-            gui.loadHistory(); // 加载历史聊天记录
 
             // 接收服务器消息线程
-            new Thread(() -> {
-                try {
-                    var in = new java.io.BufferedReader(
-                            new java.io.InputStreamReader(socket.getInputStream()));
-                    String msg;
-                    while ((msg = in.readLine()) != null) {
-                        gui.showMessage(msg);
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }).start();
+            var in = new java.io.BufferedReader(
+                    new java.io.InputStreamReader(socket.getInputStream()));
+            new Thread(new ClientReceiver(in, gui)).start();
 
             var out = new java.io.PrintWriter(socket.getOutputStream(), true);
             out.println("LOGIN|" + username);
