@@ -1,3 +1,8 @@
+<p align="right">
+  <a href="./README.md"><img alt="简体中文" src="https://img.shields.io/badge/简体中文-当前-blue"></a>
+  <a href="./README_EN.md"><img alt="English" src="https://img.shields.io/badge/English-Switch-2ea44f"></a>
+</p>
+
 # TCPChatRoom
 
 一个基于 Java Socket + Swing 的局域网聊天室示例项目，支持：
@@ -7,10 +12,23 @@
 - 表情、图片、文件消息
 - MySQL 聊天记录持久化
 
+## 界面预览
+
+登录界面：
+
+![登录界面](assets/1.png)
+
+聊天主界面：
+
+![聊天主界面](assets/2.png)
+
 ## 目录结构
 
 ```text
 TCPChatRoom/
+├─ assets/
+│  ├─ 1.png
+│  └─ 2.png
 ├─ src/chat/
 │  ├─ ChatServer.java        # 服务端入口
 │  ├─ ChatClientMain.java    # GUI 客户端入口
